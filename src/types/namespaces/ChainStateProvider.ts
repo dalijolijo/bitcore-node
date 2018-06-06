@@ -74,6 +74,9 @@ export declare namespace CSP {
     args: Partial<StreamWalletUtxosArgs>;
     stream: Response;
   };
+  export type MetadataParams = ChainNetwork & {
+    hex: string;
+  };
 
   export type Provider<T> = { get(params: { chain: string }): T };
   export type ChainStateProvider = Provider<IChainStateService> &
@@ -94,6 +97,7 @@ export declare namespace CSP {
     streamWalletAddresses(params: StreamWalletAddressesParams): any;
     streamWalletTransactions(params: StreamWalletTransactionsParams): any;
     streamWalletUtxos(params: StreamWalletUtxosParams): any;
+    lookupMetadata(params: MetadataParams): any;
   }
 
   type ChainStateServices = { [key: string]: IChainStateService };

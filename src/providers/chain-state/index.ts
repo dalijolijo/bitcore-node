@@ -82,6 +82,10 @@ class ChainStateProxy implements CSP.ChainStateProvider {
     return this.get(params).broadcastTransaction(params);
   }
 
+  async lookupMetadata(params: CSP.MetadataParams) {
+    return this.get(params).lookupMetadata(params);
+  }
+
   registerService(currency: string, service: CSP.IChainStateService){
     services[currency] = service;
   };

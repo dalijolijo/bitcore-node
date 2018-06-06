@@ -9,6 +9,7 @@ import { Storage } from '../../../services/storage';
 import { RPC } from '../../../rpc';
 import { LoggifyClass } from '../../../decorators/Loggify';
 import config from '../../../config';
+const Chain = require('../../../chain');
 
 import {
   TransactionQuery,
@@ -242,5 +243,27 @@ export class InternalStateProvider implements CSP.IChainStateService {
       });
     });
     return txPromise;
+  }
+
+  async lookupMetadata(params: CSP.MetadataParams) {
+    let { network, hex } = params;
+    if (!this.chain || !network) {
+      throw 'Missing required param';
+    }
+    let query: CoinQuery = {
+      chain: this.chain,
+      network: network.toLowerCase()
+    };
+    const script = Chain[this.chain].lib.Script;
+    const hexBuffer = Buffer.from(hex, 'hex');
+    query.script = script.buildDataOut(hexBuffer).toBuffer();
+    let metadatas = await CoinModel.find(query).exec();
+    if (!metadatas) {
+      throw 'Not Found';
+    }
+    let transformedMetadatas = metadatas.map(metadata =>
+      CoinModel._apiTransform(metadata, { object: true })
+    );
+    return transformedMetadatas;
   }
 }
