@@ -1,7 +1,6 @@
 import { Schema, Document, model, DocumentQuery } from "mongoose";
 import { CoinModel, CoinQuery, ICoinModel } from "./coin";
 import { WalletAddressModel } from "./walletAddress";
-import { BitcoinTransactionType } from "../types/Transaction";
 import { partition } from "../utils/partition";
 import { ObjectID } from "bson";
 import { TransformOptions } from "../types/TransformOptions";
@@ -9,6 +8,7 @@ import { ChainNetwork } from "../types/ChainNetwork";
 import { TransformableModel } from "../types/TransformableModel";
 import logger from "../logger";
 import { LoggifyObject } from "../decorators/Loggify";
+import { Bitcoin } from "../types/namespaces/Bitcoin";
 const config = require("../config");
 const Chain = require("../chain");
 
@@ -32,8 +32,8 @@ export type TransactionQuery = {[key in keyof ITransaction]?: any}&
 type ITransactionDoc = ITransaction & Document;
 type ITransactionModelDoc = ITransactionDoc & TransformableModel<ITransactionDoc>;
 
-type BatchImportMethodParams = {
-  txs: Array<BitcoinTransactionType>;
+export type BatchImportMethodParams = {
+  txs: Array<Bitcoin.Transaction>;
   height: number;
   blockTime?: Date;
   blockHash?: string;
@@ -282,9 +282,7 @@ TransactionSchema.statics.getMintOps = async function(
             )
             .map(wallet => wallet.wallet);
 
-          Object.assign(mintOp, {
-            updateOne: { update: { $set: { wallets: transformedWallets } } }
-          });
+          mintOp.updateOne.update.$set.wallets = transformedWallets;
           return mintOp;
         });
       }
@@ -328,9 +326,7 @@ TransactionSchema.statics.getSpendOps = function(
         }
       };
       if (config.pruneSpentScripts && height > 0) {
-        Object.assign(updateQuery, {
-          updateOne: { update: { $unset: { script: null } } }
-        });
+        Object.assign(updateQuery.updateOne.update, {$unset: {script: null}});
       }
       spendOps.push(updateQuery);
     }
@@ -342,25 +338,7 @@ TransactionSchema.statics.getTransactions = function(params: {
   query: TransactionQuery;
 }) {
   let query = params.query;
-  return TransactionModel.collection.aggregate([
-    { $match: query },
-    {
-      $lookup: {
-        from: "coins",
-        localField: "txid",
-        foreignField: "spentTxid",
-        as: "inputs"
-      }
-    },
-    {
-      $lookup: {
-        from: "coins",
-        localField: "txid",
-        foreignField: "mintTxid",
-        as: "outputs"
-      }
-    }
-  ]);
+  return this.find(query).cursor();
 };
 
 TransactionSchema.statics._apiTransform = function(
